@@ -59,9 +59,9 @@ void UMyBlueprintFunctionLibrary::TestSaveMapDataToFile(FString PackageName, FSt
 
 		const bool bWarnOfLongFilename = !bAutosaving;
 		//bWasSuccessful = SavePackage(Pkg, NULL, RF_Standalone, *TempFname, &Ar, NULL, false, bWarnOfLongFilename, SaveFlags);
-		ITargetPlatformModule& TargetModule = FModuleManager::LoadModuleChecked<ITargetPlatformModule>("WindowsNoEditorTargetPlatform");
-		ITargetPlatform* Target = TargetModule.GetTargetPlatform();
+		/*ITargetPlatformModule& TargetModule = FModuleManager::LoadModuleChecked<ITargetPlatformModule>("WindowsNoEditorTargetPlatform");
+		ITargetPlatform* Target = TargetModule.GetTargetPlatform();*/
 
-		UPackage::Save(Pkg, nullptr, RF_Standalone, *FinalPackageSavePath,GLog, NULL, false, bWarnOfLongFilename, SaveFlags, Target, FDateTime::MinValue(), false, NULL);
+		UPackage::Save(Pkg, nullptr, RF_Standalone, *FinalPackageSavePath,GLog, NULL, false, bWarnOfLongFilename, SaveFlags, NULL, FDateTime::MinValue(), false, NULL);
 	}
 }

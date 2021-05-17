@@ -8,7 +8,8 @@ public class MapDataSave : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" , "WindowsNoEditorTargetPlatform", "TargetPlatform" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" , "TargetPlatform" });
+	
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
