@@ -8,6 +8,9 @@
 #include "Package.h"
 //#include "BusyCursor.h"
 #include "CoreGlobals.h"
+#include "TargetPlatform/Public/Interfaces/ITargetPlatformModule.h"
+#include "ModuleManager.h"
+#include "TargetPlatform/Public/Interfaces/ITargetPlatform.h"
 
 void UMyBlueprintFunctionLibrary::TestSaveMapDataToFile(FString PackageName, FString FinalPackageSavePath)
 {
@@ -56,8 +59,9 @@ void UMyBlueprintFunctionLibrary::TestSaveMapDataToFile(FString PackageName, FSt
 
 		const bool bWarnOfLongFilename = !bAutosaving;
 		//bWasSuccessful = SavePackage(Pkg, NULL, RF_Standalone, *TempFname, &Ar, NULL, false, bWarnOfLongFilename, SaveFlags);
+		ITargetPlatformModule& TargetModule = FModuleManager::LoadModuleChecked<ITargetPlatformModule>("WindowsNoEditorTargetPlatform");
+		ITargetPlatform* Target = TargetModule.GetTargetPlatform();
 
-
-		UPackage::Save(Pkg, nullptr, RF_Standalone, *FinalPackageSavePath,GLog, NULL, false, bWarnOfLongFilename, SaveFlags, NULL, FDateTime::MinValue(), false, NULL);
+		UPackage::Save(Pkg, nullptr, RF_Standalone, *FinalPackageSavePath,GLog, NULL, false, bWarnOfLongFilename, SaveFlags, Target, FDateTime::MinValue(), false, NULL);
 	}
 }
