@@ -11,6 +11,10 @@
 #include "TargetPlatform/Public/Interfaces/ITargetPlatformModule.h"
 #include "ModuleManager.h"
 #include "TargetPlatform/Public/Interfaces/ITargetPlatform.h"
+#include "LinkerLoad.h"
+
+
+PRAGMA_DISABLE_OPTIMIZATION
 
 void UMyBlueprintFunctionLibrary::TestSaveMapDataToFile(FString PackageName, FString FinalPackageSavePath)
 {
@@ -51,17 +55,42 @@ void UMyBlueprintFunctionLibrary::TestSaveMapDataToFile(FString PackageName, FSt
 
 		//FScopedSlowTask SlowTask(100, SavingPackageText, !bSilent);
 
-		uint32 SaveFlags = bAutosaving ? SAVE_FromAutosave : SAVE_None;
-		if (bKeepDirty)
-		{
-			SaveFlags |= SAVE_KeepDirty;
-		}
-
+		//uint32 SaveFlags = bAutosaving ? SAVE_FromAutosave : SAVE_None;
+		//if (bKeepDirty)
+		//{
+		//	SaveFlags |= SAVE_KeepDirty;
+		//}
+		uint32 SaveFlags = SAVE_KeepGUID | SAVE_Async;
+		//SaveFlags |= SAVE_Async;
 		const bool bWarnOfLongFilename = !bAutosaving;
 		//bWasSuccessful = SavePackage(Pkg, NULL, RF_Standalone, *TempFname, &Ar, NULL, false, bWarnOfLongFilename, SaveFlags);
-		ITargetPlatformModule& TargetModule = FModuleManager::LoadModuleChecked<ITargetPlatformModule>("WindowsNoEditorTargetPlatform");
-		ITargetPlatform* Target = TargetModule.GetTargetPlatform();
+		/*ITargetPlatformModule& TargetModule = FModuleManager::LoadModuleChecked<ITargetPlatformModule>("WindowsNoEditorTargetPlatform");*/
+		ITargetPlatform* Target = NULL;
 
-		UPackage::Save(Pkg, nullptr, RF_Standalone, *FinalPackageSavePath,GLog, NULL, false, bWarnOfLongFilename, SaveFlags, Target, FDateTime::MinValue(), false, NULL);
+
+		UObject* Base = nullptr;
+		if (!Base && Pkg && Pkg->HasAnyPackageFlags(PKG_ContainsMap))
+		{
+			Base = UWorld::FindWorldInPackage(Pkg);
+		}
+
+		// Record the package flags before OnPreSaveWorld. They will be used in OnPostSaveWorld.
+		const uint32 OriginalPackageFlags = (Pkg ? Pkg->GetPackageFlags() : 0);
+
+
+
+		bool bInitializedPhysicsSceneForSave = false;
+		bool bForceInitializedWorld = false;
+		
+		//int64 Size = Pkg->LinkerLoad->TotalSize();
+		Pkg->FullyLoad();
+
+		UPackage::PreSavePackageEvent.Broadcast(Pkg);
+		FSavePackageResultStruct Result = UPackage::Save(Pkg, nullptr, RF_Standalone, *FinalPackageSavePath,GLog, NULL, false, bWarnOfLongFilename, SaveFlags, NULL, FDateTime::MinValue(), false, NULL);
+		Result.CookedHash;
+		UE_LOG(LogTemp,Warning,TEXT("File Size : %d"), Result.TotalFileSize);
 	}
 }
+
+
+PRAGMA_ENABLE_OPTIMIZATION
