@@ -80,18 +80,17 @@ void UMyBlueprintFunctionLibrary::TestSaveMapDataToFile(FString PackageName, FSt
 		const uint32 OriginalPackageFlags = (Pkg ? Pkg->GetPackageFlags() : 0);
 
 
-
 		bool bInitializedPhysicsSceneForSave = false;
 		bool bForceInitializedWorld = false;
 		
 		//int64 Size = Pkg->LinkerLoad->TotalSize();
-		Pkg->FullyLoad();
-
+		Pkg->MarkPackageDirty();
+		Pkg->ClearPackageFlags(PKG_FilterEditorOnly);
 		FNoEditorPlatformModule* WindowsNoEditorPlatformModule = FModuleManager::LoadModulePtr<FNoEditorPlatformModule>("NoEditorPlatform");
-		if (WindowsNoEditorPlatformModule && WindowsNoEditorPlatformModule->GetWIndowsNoEditorPlftform())
+		if (WindowsNoEditorPlatformModule)
 		{
 			UPackage::PreSavePackageEvent.Broadcast(Pkg);
-			FSavePackageResultStruct Result = UPackage::Save(Pkg, nullptr, RF_Standalone, *FinalPackageSavePath, GLog, NULL, false, bWarnOfLongFilename, SaveFlags, WindowsNoEditorPlatformModule->GetWIndowsNoEditorPlftform(), FDateTime::MinValue(), false, NULL);
+			FSavePackageResultStruct Result = UPackage::Save(Pkg, Base, EObjectFlags::RF_Public | EObjectFlags::RF_Standalone, *FinalPackageSavePath, GLog, Pkg->LinkerLoad, false, bWarnOfLongFilename, SaveFlags, WindowsNoEditorPlatformModule->GetWIndowsNoEditorPlftform(), FDateTime::MinValue(), false, NULL);
 			Result.CookedHash;
 			UE_LOG(LogTemp, Warning, TEXT("File Size : %d"), Result.TotalFileSize);
 		}

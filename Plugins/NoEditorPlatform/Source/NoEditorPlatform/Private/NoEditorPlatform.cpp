@@ -8,6 +8,8 @@
 
 #define LOCTEXT_NAMESPACE "FNoEditorPlatformModule"
 
+PRAGMA_DISABLE_OPTIMIZATION
+
 void FNoEditorPlatformModule::StartupModule()
 {
 	Plftform = nullptr;
@@ -21,6 +23,11 @@ void FNoEditorPlatformModule::ShutdownModule()
 	
 }
 
+//bool FNoEditorPlatformModule::ShouldCookPackageForPlatform(const UPackage* package, const ITargetPlatform* platform)
+//{
+//	return true;
+//}
+
 //ITargetPlatform* FNoEditorPlatformModule::GetWIndowsNoEditorPlftform()
 //{
 //	
@@ -29,3 +36,6 @@ void FNoEditorPlatformModule::ShutdownModule()
 #undef LOCTEXT_NAMESPACE
 	
 IMPLEMENT_MODULE(FNoEditorPlatformModule, NoEditorPlatform)
+
+
+PRAGMA_ENABLE_OPTIMIZATION

@@ -19,6 +19,8 @@
 #define IS_CLIENT_ONLY false
 
 
+PRAGMA_DISABLE_OPTIMIZATION
+
 class FRunTimeNoEditorTargetPlatform : public TTargetPlatformBase<FWindowsPlatformProperties<HAS_EDITOR_DATA, IS_DEDICATED_SERVER, IS_CLIENT_ONLY>>
 {
 public:
@@ -115,6 +117,11 @@ public:
 		}
 
 		return nullptr;
+	}
+
+	virtual bool HasEditorOnlyData() const override
+	{
+		return HAS_EDITOR_DATA;
 	}
 
 	virtual ITargetDevicePtr GetDevice(const FTargetDeviceId& DeviceId)
@@ -512,3 +519,6 @@ private:
 
 
 #undef LOCTEXT_NAMESPACE
+
+
+PRAGMA_ENABLE_OPTIMIZATION
