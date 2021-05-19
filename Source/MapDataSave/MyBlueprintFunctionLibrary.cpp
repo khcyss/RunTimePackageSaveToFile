@@ -12,6 +12,8 @@
 #include "ModuleManager.h"
 #include "TargetPlatform/Public/Interfaces/ITargetPlatform.h"
 #include "LinkerLoad.h"
+#include "NoEditorPlatform.h"
+
 
 
 PRAGMA_DISABLE_OPTIMIZATION
@@ -85,10 +87,25 @@ void UMyBlueprintFunctionLibrary::TestSaveMapDataToFile(FString PackageName, FSt
 		//int64 Size = Pkg->LinkerLoad->TotalSize();
 		Pkg->FullyLoad();
 
-		UPackage::PreSavePackageEvent.Broadcast(Pkg);
-		FSavePackageResultStruct Result = UPackage::Save(Pkg, nullptr, RF_Standalone, *FinalPackageSavePath,GLog, NULL, false, bWarnOfLongFilename, SaveFlags, NULL, FDateTime::MinValue(), false, NULL);
-		Result.CookedHash;
-		UE_LOG(LogTemp,Warning,TEXT("File Size : %d"), Result.TotalFileSize);
+		FNoEditorPlatformModule* WindowsNoEditorPlatformModule = FModuleManager::LoadModulePtr<FNoEditorPlatformModule>("NoEditorPlatform");
+		if (WindowsNoEditorPlatformModule && WindowsNoEditorPlatformModule->GetWIndowsNoEditorPlftform())
+		{
+			UPackage::PreSavePackageEvent.Broadcast(Pkg);
+			FSavePackageResultStruct Result = UPackage::Save(Pkg, nullptr, RF_Standalone, *FinalPackageSavePath, GLog, NULL, false, bWarnOfLongFilename, SaveFlags, WindowsNoEditorPlatformModule->GetWIndowsNoEditorPlftform(), FDateTime::MinValue(), false, NULL);
+			Result.CookedHash;
+			UE_LOG(LogTemp, Warning, TEXT("File Size : %d"), Result.TotalFileSize);
+		}
+
+		//const ITargetPlatform* TargetPlatform = new TGenericWindowsTargetPlatform<false, false, false>(); //TPM.FindTargetPlatform(TargetPlatformNameString);
+		
+		//if (TargetPlatform)
+		//{
+			
+		//}
+
+		
+
+		
 	}
 }
 
