@@ -16,4 +16,11 @@ class MAPDATASAVE_API UMyBlueprintFunctionLibrary : public UBlueprintFunctionLib
 public:
 	UFUNCTION(BlueprintCallable)
 		static void TestSaveMapDataToFile(FString PackageName, FString FinalPackageSavePath);
+
+
+	static bool CookPackage(UPackage* package, const FString& SavePath);
+
+
+
+
 };

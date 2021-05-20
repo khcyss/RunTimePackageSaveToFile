@@ -8,7 +8,7 @@ public class MapDataSave : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" , "NoEditorPlatform" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" , "NoEditorPlatform", "SandboxFile", });
 
 
         PrivateDependencyModuleNames.AddRange(new string[] {  });
@@ -19,9 +19,15 @@ public class MapDataSave : ModuleRules
         PrivateDependencyModuleNames.AddRange(new string[] {
                 "RHI",
                 "Engine",
-            "TargetPlatform" ,"DesktopPlatform"
+            "TargetPlatform" ,"DesktopPlatform","RenderCore","Projects",
           }
         );
+
+        if(Target.Type == TargetType.Editor)
+        {
+            PrivateDependencyModuleNames.Add("UnrealEd");
+        }
+
 
         PrivateIncludePathModuleNames.Add("TextureCompressor");
         PrivateIncludePathModuleNames.Add("TargetPlatform");
