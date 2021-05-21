@@ -35,6 +35,8 @@ public class NoEditorPlatform : ModuleRules
                 "DesktopPlatform",
                 "RHI",
 				"Engine",
+				"SandboxFile",
+				"InputCore"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -43,12 +45,15 @@ public class NoEditorPlatform : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
+				"Projects"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
-		
-		
-		DynamicallyLoadedModuleNames.AddRange(
+
+        PrivateIncludePathModuleNames.Add("TextureCompressor");
+        PrivateIncludePathModuleNames.Add("TargetPlatform");
+
+        DynamicallyLoadedModuleNames.AddRange(
 			new string[]
 			{
 				// ... add any modules that your module loads dynamically here ...
