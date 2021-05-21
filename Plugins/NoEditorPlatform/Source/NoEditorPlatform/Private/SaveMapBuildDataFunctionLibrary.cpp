@@ -16,6 +16,7 @@
 #include "ITargetPlatformManagerModule.h"
 #include "IPluginManager.h"
 #include "Engine/Texture2D.h"
+#include "Engine/MapBuildDataRegistry.h"
 
 
 
@@ -51,6 +52,7 @@ void URuntimeSaveMapBuildData::SaveMapDataToFile(FString PackageName, FString Fi
 		{
 			Loader->GetLinker();
 		}
+		SaveMapBuildata(Pkg, FinalPackageSavePath);
 		//Pkg->LinkerLoad->DetachAllBulkData(true);
 		CookPackage(Pkg, FinalPackageSavePath);
 		
@@ -144,5 +146,26 @@ bool URuntimeSaveMapBuildData::CookPackage(UPackage* Package, const FString& Sav
 	return bSuccessed;
 }
 
+
+
+
+void URuntimeSaveMapBuildData::SaveMapBuildata(UPackage* MapBuildDataPackage, const FString& FileSave)
+{
+	TArray<UObject*> ExportMap;
+	GetObjectsWithOuter(MapBuildDataPackage, ExportMap);
+	UMapBuildDataRegistry* MapBuilData = nullptr;
+	TArray<UObject*> ExportTexture;
+	for (auto EachObject: ExportMap)
+	{
+		if (EachObject->IsA(UMapBuildDataRegistry::StaticClass()))
+		{
+			MapBuilData = Cast<UMapBuildDataRegistry>(EachObject);
+		}
+		else if (EachObject->IsA(UTexture::StaticClass()))
+		{
+			ExportTexture.Add(EachObject);
+		}
+	}
+}
 
 PRAGMA_ENABLE_OPTIMIZATION

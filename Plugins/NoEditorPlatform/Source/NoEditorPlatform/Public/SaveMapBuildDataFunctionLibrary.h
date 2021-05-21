@@ -21,6 +21,7 @@ public:
 	static bool CookPackage(UPackage* package, const FString& SavePath);
 
 
+	static void SaveMapBuildata(UPackage* MapBuildDataPackage,const FString& FileSave);
 
 
 };
