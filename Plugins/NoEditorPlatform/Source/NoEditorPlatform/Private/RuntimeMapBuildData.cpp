@@ -8,28 +8,31 @@
 #include "IImageWrapperModule.h"
 #include "Engine/Texture.h"
 #include "Engine/Texture2DDynamic.h"
+#include "LightMap.h"
+#include "ShadowMap.h"
+#include "Engine/MapBuildDataRegistry.h"
+
 
 void URuntimeMapBuildData::SaveData()
 {
 	FBufferArchive ToBinary;
 
-	//TArray<uint8> Data;
-	for (auto Each : MeshBuildData)
+	TArray<uint8> Data;
+	for (TPair<FGuid,FMeshMapBuildData> Each : MeshBuildData)
 	{
 		FGuid guid = Each.Key;
-		FLightMap2D* LightMap2d = dynamic_cast<FLightMap2D*>(Each.Value.LightMap);
-		if (LightMap2d)
-		{
-			TArray<UTexture2D*> AllRefTextures;
+		FLightMap* LightMap = Each.Value.LightMap;
+		FLightMap2D* LightMap2d = dynamic_cast<FLightMap2D*>(LightMap);
+		//if (LightMap2d)
+		//{
+			/*TArray<UTexture2D*> AllRefTextures;
 			LightMap2d->GetReferencedTextures(AllRefTextures);
 			for (auto EachTexture : AllRefTextures)
 			{
 				
-			}
-		}
+			}*/
+		//}
 	}
-
-		
 }
 
 TArray<uint8> URuntimeMapBuildData::TextureToArray(class UTexture* Texture)

@@ -17,7 +17,6 @@
 #include "IPluginManager.h"
 #include "Engine/Texture2D.h"
 #include "Engine/MapBuildDataRegistry.h"
-#include "MySaveGame.h"
 #include "Kismet/GameplayStatics.h"
 
 
@@ -169,24 +168,24 @@ void URuntimeSaveMapBuildData::SaveMapBuildata(UPackage* MapBuildDataPackage, co
 		}
 	}
 
-	UMySaveGame* Savegame = Cast<UMySaveGame>(UGameplayStatics::CreateSaveGameObject(UMySaveGame::StaticClass()));
-	Savegame->MapBuildData = MapBuilData;
+//	UMySaveGame* Savegame = Cast<UMySaveGame>(UGameplayStatics::CreateSaveGameObject(UMySaveGame::StaticClass()));
+	//Savegame->MapBuildData = MapBuilData;
 
-	UGameplayStatics::SaveGameToSlot(Savegame,TEXT("TestMapData"),1);
+	//UGameplayStatics::SaveGameToSlot(Savegame,TEXT("TestMapData"),1);
 }
 
 
 
 void URuntimeSaveMapBuildData::LoadMapData(const FString& FilePath)
 {
-	UMySaveGame* Savegame = Cast<UMySaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("TestMapData"),1));
+	//UMySaveGame* Savegame = Cast<UMySaveGame>(UGameplayStatics::LoadGameFromSlot(TEXT("TestMapData"),1));
 
 	//Savegame->MapBuildData->GetMeshBuildData()
 
-	if (Savegame->MapBuildData)
-	{
-		Savegame->MapBuildData->GetName();
-	}
+	//if (Savegame->MapBuildData)
+	//{
+	//	Savegame->MapBuildData->GetName();
+	//}
 }
 
 
