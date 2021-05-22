@@ -21,17 +21,16 @@ void URuntimeMapBuildData::SaveData()
 	for (TPair<FGuid,FMeshMapBuildData> Each : MeshBuildData)
 	{
 		FGuid guid = Each.Key;
-		FLightMap* LightMap = Each.Value.LightMap;
-		FLightMap2D* LightMap2d = dynamic_cast<FLightMap2D*>(LightMap);
-		//if (LightMap2d)
-		//{
+		FLightMap2D* LightMap2d = Each.Value.LightMap->GetLightMap2D();
+		if (LightMap2d)
+		{
 			/*TArray<UTexture2D*> AllRefTextures;
 			LightMap2d->GetReferencedTextures(AllRefTextures);
 			for (auto EachTexture : AllRefTextures)
 			{
 				
 			}*/
-		//}
+		}
 	}
 }
 
