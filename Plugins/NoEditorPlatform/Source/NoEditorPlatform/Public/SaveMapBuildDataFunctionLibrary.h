@@ -24,4 +24,8 @@ public:
 	static void SaveMapBuildata(UPackage* MapBuildDataPackage,const FString& FileSave);
 
 
+
+	UFUNCTION(BlueprintCallable)
+	static void LoadMapData(const FString& FilePath);
+
 };

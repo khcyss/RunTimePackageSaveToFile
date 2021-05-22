@@ -36,7 +36,8 @@ public class NoEditorPlatform : ModuleRules
                 "RHI",
 				"Engine",
 				"SandboxFile",
-				"InputCore"
+				"InputCore",
+
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -45,7 +46,10 @@ public class NoEditorPlatform : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Projects"
+				"Projects",
+                "ImageWrapper",
+                "RHI",
+                "RenderCore",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
