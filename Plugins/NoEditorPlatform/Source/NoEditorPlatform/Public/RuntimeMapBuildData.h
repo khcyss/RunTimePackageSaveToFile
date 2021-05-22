@@ -17,7 +17,12 @@ class NOEDITORPLATFORM_API URuntimeMapBuildData : public UObject
 public:
 	void SaveData();
 
+	void loadData();
+
 	TArray<uint8> TextureToArray(class UTexture* Texture);
+
+	bool LoadImagedataToTexture(TArray<uint8> FileData, UTexture2D*& InTexture, float& Width, float& Height);
+
 
 	TMap<FGuid, FMeshMapBuildData> MeshBuildData;
 	//TMap<FGuid, FPrecomputedLightVolumeData*> LevelPrecomputedLightVolumeBuildData;
