@@ -13,6 +13,7 @@
 #include "Engine/MapBuildDataRegistry.h"
 #include "FileHelper.h"
 #include "MemoryReader.h"
+#include "Engine/ShadowMapTexture2D.h"
 
 
 PRAGMA_DISABLE_OPTIMIZATION
@@ -32,7 +33,7 @@ void URuntimeMapBuildData::SaveData()
 		FLightMap2D* LightMap2d = Each.Value.LightMap->GetLightMap2D();
 		if (LightMap2d)
 		{
-			TArray<UTexture2D*> AllRefTextures;
+			TArray<ULightMapTexture2D*> AllRefTextures;
 			LightMap2d->GetReferencedTextures(AllRefTextures);
 			bool HasSkyOcclusionTexture = LightMap2d->GetSkyOcclusionTexture()? true:false;
 			bool HasAOMaterialMaskTexture = LightMap2d->GetAOMaterialMaskTexture()? true :false;
@@ -40,10 +41,10 @@ void URuntimeMapBuildData::SaveData()
 			ToBinary<<TextureNum;
 			ToBinary << HasAOMaterialMaskTexture;
 			ToBinary << HasSkyOcclusionTexture;
-			for (auto EachTexture : AllRefTextures)
+			for (ULightMapTexture2D* EachTexture : AllRefTextures)
 			{
-				FString Start="";
-				ToBinary<<Start;
+				uint32 LightmapFlags = EachTexture->LightmapFlags;
+				ToBinary<< LightmapFlags;
 				TArray<uint8> Texturedata = TextureToArray(EachTexture);
 				ToBinary<<Texturedata;
 			}
@@ -64,7 +65,7 @@ void URuntimeMapBuildData::SaveData()
 		}
 		
 	}
-	FFileHelper::SaveArrayToFile(ToBinary,TEXT("C:/Users/Khcy/Desktop/SaveTestFile"));
+	FFileHelper::SaveArrayToFile(ToBinary,TEXT("C:/Users/Administrator/Desktop/SaveTestFile"));
 
 	ToBinary.FlushCache();
 	ToBinary.Empty();
@@ -73,7 +74,8 @@ void URuntimeMapBuildData::SaveData()
 void URuntimeMapBuildData::loadData()
 {
 	TArray<uint8> BinaryArray;
-	if (FFileHelper::LoadFileToArray(BinaryArray, TEXT("C:/Users/Khcy/Desktop/SaveTestFile")))
+	UMapBuildDataRegistry* MapBuildDataRegis = NewObject<UMapBuildDataRegistry>();
+	if (FFileHelper::LoadFileToArray(BinaryArray, TEXT("C:/Users/Administrator/Desktop/SaveTestFile")))
 	{
 		FMemoryReader FromBinary = FMemoryReader(BinaryArray, true);
 		FromBinary.Seek(0);
@@ -82,7 +84,10 @@ void URuntimeMapBuildData::loadData()
 		for (int i = 0; i < Size; i++)
 		{
 			FMeshMapBuildData MeshBuid = FMeshMapBuildData();
-			MeshBuid.LightMap = TRefCountPtr<FLightMap2D>();
+			TRefCountPtr<FLightMap2D> LightMap = TRefCountPtr<FLightMap2D>(new FLightMap2D());
+			TRefCountPtr<FShadowMap2D> ShadowMap = TRefCountPtr<FShadowMap2D>(new FShadowMap2D());
+			MeshBuid.LightMap = LightMap;
+			MeshBuid.ShadowMap = ShadowMap;
 			FGuid guid;
 			int32 TextureNum;
 			bool HasSkyOcclusionTexture = false;
@@ -93,29 +98,35 @@ void URuntimeMapBuildData::loadData()
 			FromBinary << HasSkyOcclusionTexture;
 			for (int j=0; j<TextureNum;j++)
 			{
-				FString Start;
-				FromBinary<<Start;
+				uint32 LightmapFlags;
+				FromBinary<< LightmapFlags;
 				TArray<uint8> TextureFileData;
 				FromBinary<<TextureFileData;
-				UTexture2D* Image;
+				ULightMapTexture2D* Image;
 				float Hegiht;
 				float width;
-				LoadImagedataToTexture(TextureFileData, Image,width,Hegiht);
+				LoadImagedataToTexture<ULightMapTexture2D>(TextureFileData, Image,width,Hegiht);
+				Image->LightmapFlags = ELightMapFlags(LightmapFlags);
+				LightMap->Textures[j] = Image;
 			}
 			bool HasShadowMap =false;
 			FromBinary<<HasShadowMap;
 			if (HasShadowMap)
 			{
+				TArray<FGuid> LightGuids;
+				FromBinary << LightGuids;
 				TArray<uint8> TextureFileData;
 				FromBinary << TextureFileData;
 				TArray<uint8> TextureColorData;
-				UTexture2D* Image;
+				UShadowMapTexture2D* Image;
 				float Hegiht;
 				float width;
-				LoadImagedataToTexture(TextureFileData, Image, width, Hegiht);
+				LoadImagedataToTexture<UShadowMapTexture2D>(TextureFileData, Image, width, Hegiht);
+				ShadowMap->Texture = Image;
 			}
 			MeshBuildData.Add(guid,MeshBuid);
 		}
+		MapBuildDataRegis->SetAllMeshBuildData(MeshBuildData);
 	}
 }
 
@@ -138,8 +149,8 @@ TArray<uint8> URuntimeMapBuildData::TextureToArray(class UTexture* Texture)
 }
 
 
-
-bool URuntimeMapBuildData::LoadImagedataToTexture(TArray<uint8> FileData, UTexture2D*& InTexture, float& Width, float& Height)
+template<class T>
+bool URuntimeMapBuildData::LoadImagedataToTexture(TArray<uint8> FileData, T*& InTexture, float& Width, float& Height)
 {
 	const TArray<uint8> *ImageData = new TArray<uint8>();
 	EImageFormat ImageFormat = EImageFormat::PNG;
@@ -147,11 +158,38 @@ bool URuntimeMapBuildData::LoadImagedataToTexture(TArray<uint8> FileData, UTextu
 	TSharedPtr<IImageWrapper>ImageWrapperPtr = ImageWrapperModule.CreateImageWrapper(ImageFormat);
 	if (ImageWrapperPtr.IsValid() && ImageWrapperPtr->SetCompressed(FileData.GetData(), FileData.GetAllocatedSize()))
 	{
-		//OutData 与格式无关的颜色数据
+		//OutData 涓庢牸寮忔棤鍏崇殑棰滆壊鏁版嵁
 		ImageWrapperPtr->GetRaw(ERGBFormat::BGRA, 8, ImageData);
 		Width = ImageWrapperPtr->GetWidth();
 		Height = ImageWrapperPtr->GetHeight();
-		InTexture = UTexture2D::CreateTransient(Width, Height, PF_B8G8R8A8);
+		int32 SizeX = Width;
+		int32 Sizey = Height;
+		if (SizeX > 0 && Sizey > 0 &&
+			(SizeX % GPixelFormats[PF_B8G8R8A8].BlockSizeX) == 0 &&
+			(Sizey % GPixelFormats[PF_B8G8R8A8].BlockSizeY) == 0)
+		{
+			InTexture = NewObject<T>(
+				GetTransientPackage(),
+				NAME_None,
+				RF_Transient
+				);
+
+			InTexture->PlatformData = new FTexturePlatformData();
+			InTexture->PlatformData->SizeX = Width;
+			InTexture->PlatformData->SizeY = Height;
+			InTexture->PlatformData->PixelFormat = PF_B8G8R8A8;
+
+			// Allocate first mipmap.
+			int32 NumBlocksX = SizeX / GPixelFormats[PF_B8G8R8A8].BlockSizeX;
+			int32 NumBlocksY = Sizey / GPixelFormats[PF_B8G8R8A8].BlockSizeY;
+			FTexture2DMipMap* Mip = new FTexture2DMipMap();
+			InTexture->PlatformData->Mips.Add(Mip);
+			Mip->SizeX = Width;
+			Mip->SizeY = Height;
+			Mip->BulkData.Lock(LOCK_READ_WRITE);
+			Mip->BulkData.Realloc(NumBlocksX * NumBlocksY * GPixelFormats[PF_B8G8R8A8].BlockBytes);
+			Mip->BulkData.Unlock();
+		}
 		if (InTexture)
 		{
 			void* TextureData = InTexture->PlatformData->Mips[0].BulkData.Lock(LOCK_READ_WRITE);

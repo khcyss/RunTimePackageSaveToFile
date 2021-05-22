@@ -21,7 +21,8 @@ public:
 
 	TArray<uint8> TextureToArray(class UTexture* Texture);
 
-	bool LoadImagedataToTexture(TArray<uint8> FileData, UTexture2D*& InTexture, float& Width, float& Height);
+	template<class T>
+	bool LoadImagedataToTexture(TArray<uint8> FileData, T*& InTexture, float& Width, float& Height);
 
 
 	TMap<FGuid, FMeshMapBuildData> MeshBuildData;

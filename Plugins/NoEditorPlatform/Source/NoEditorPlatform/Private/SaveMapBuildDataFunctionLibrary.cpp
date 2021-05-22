@@ -170,7 +170,7 @@ void URuntimeSaveMapBuildData::SaveMapBuildata(UPackage* MapBuildDataPackage, co
 	}
 
 	URuntimeMapBuildData* SaveData = NewObject<URuntimeMapBuildData>();
-	SaveData->MeshBuildData = MapBuilData->MeshBuildData;
+	SaveData->MeshBuildData = MapBuilData->GetAllMeshBuildData();
 	SaveData->SaveData();
 //	UMySaveGame* Savegame = Cast<UMySaveGame>(UGameplayStatics::CreateSaveGameObject(UMySaveGame::StaticClass()));
 	//Savegame->MapBuildData = MapBuilData;
