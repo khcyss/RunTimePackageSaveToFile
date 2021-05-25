@@ -13,6 +13,8 @@
 #include "Async.h"
 #include "Engine/ShadowMapTexture2D.h"
 #include "Object.h"
+#include "Engine/Texture.h"
+#include "Engine/World.h"
 
 PRAGMA_DISABLE_OPTIMIZATION
 
@@ -97,14 +99,16 @@ void UAsyncLoadSaveMapBuildData::Save(UObject* WorldContextObject, const FString
 				if (ShadowMap->GetTexture())
 				{
 					ToBinary << ShadowMap->LightGuids;
+					int8 ExportFormat = ShadowMap->GetTexture()->Source.GetFormat() == ETextureSourceFormat::TSF_G8 ? (int8)ERGBFormat::Gray : (int8)ERGBFormat::BGRA;
+					ToBinary << ExportFormat;
 					TArray<uint8> Texturedata = TextureToArray(ShadowMap->GetTexture());
 					ToBinary << Texturedata;
+					ToBinary << (Cast<UShadowMapTexture2D>(ShadowMap->GetTexture()))->ShadowmapFlags;
 				}
 			}
 		}
 	}
 
-	//Õµ∏ˆ¿¡◊ﬂªÿπŸ∑Ωµƒ–Ú¡–ªØ
 	MapBuildDataReg->RuntimeSaveLoadData(ToBinary);
 	if (FFileHelper::SaveArrayToFile(ToBinary, *FileToSavePath))
 	{
@@ -123,6 +127,7 @@ void UAsyncLoadSaveMapBuildData::Save(UObject* WorldContextObject, const FString
 void UAsyncLoadSaveMapBuildData::Load(UObject* WorldContextObject, const FString& FileToSavePath)
 {
 	UMapBuildDataRegistry* MapBuildDataReg = WorldContextObject->GetWorld()->GetCurrentLevel()->GetOrCreateMapBuildData();
+	MapBuildDataReg->InvalidateStaticLighting(WorldContextObject->GetWorld());//ÂàùÂßãÂåñ‰∏ÄÊ¨°Ê∏ÖÁ©∫Êï∞ÊçÆ
 	TArray<uint8> BinaryArray;
 	if (FFileHelper::LoadFileToArray(BinaryArray, *FileToSavePath))
 	{
@@ -166,7 +171,18 @@ void UAsyncLoadSaveMapBuildData::Load(UObject* WorldContextObject, const FString
 				float width;
 				LoadImagedataToTexture<ULightMapTexture2D>(MapBuildDataReg->GetOuter(), TextureFileData, Image, width, Hegiht);
 				Image->LightmapFlags = ELightMapFlags(LightmapFlags);
-				LightMap->Textures[j] = Image;
+				if (HasSkyOcclusionTexture && j == TextureNum - 2)
+				{
+					LightMap->SkyOcclusionTexture = Image;
+				}
+				else if (HasAOMaterialMaskTexture && j == TextureNum - 1)
+				{
+					LightMap->AOMaterialMaskTexture = Image;
+				}
+				else
+				{
+					LightMap->Textures[j] = Image;
+				}
 			}
 			if (TextureNum > 0)
 			{
@@ -187,20 +203,27 @@ void UAsyncLoadSaveMapBuildData::Load(UObject* WorldContextObject, const FString
 				MeshBuid.ShadowMap = NULL;
 			if (HasShadowMap)
 			{
+				int8 Format;
 				FromBinary << ShadowMap->LightGuids;
+				FromBinary << Format;
 				TArray<uint8> TextureFileData;
 				FromBinary << TextureFileData;
-				UShadowMapTexture2D* Image;
+				UShadowMapTexture2D* Image = NULL;
 				float Hegiht;
 				float width;
 				LoadImagedataToTexture<UShadowMapTexture2D>(MapBuildDataReg->GetOuter(), TextureFileData, Image, width, Hegiht);
+				Image->LODGroup = TEXTUREGROUP_Shadowmap;
+				Image->SRGB = false;
+				FromBinary << Image->ShadowmapFlags;
 				ShadowMap->Texture = Image;
+				ShadowMap->SetStatusUpdate(true);
+				ShadowMap->EncodeTextures(WorldContextObject->GetWorld(), WorldContextObject->GetWorld()->GetCurrentLevel(),true);
 			}
 			MeshBuildData.Add(guid, MeshBuid);
 		}
-		//…Ë÷√ªÿ»•
+		//ËÆæÁΩÆÂõûÂéª
 		MapBuildDataReg->SetAllMeshBuildData(MeshBuildData);
-		//◊ﬂªÿπŸ∑Ωµƒ–Ú¡–ªØ
+		//Ëµ∞ÂõûÂÆòÊñπÁöÑÂ∫èÂàóÂåñ
 		MapBuildDataReg->RuntimeSaveLoadData(FromBinary);
 		if (WorldContextObject)
 		{
@@ -231,7 +254,8 @@ TArray<uint8> UAsyncLoadSaveMapBuildData::TextureToArray(class UTexture* Texture
 	float Width = PlatformData->SizeX;
 	float Height = PlatformData->SizeY;
 	int Depth = Texture->Source.GetFormat() == ETextureSourceFormat::TSF_RGBA16 ? 16 : 8;
-	if (ImageWrapperPtr.IsValid() && ImageWrapperPtr->SetRaw(OutData.GetData(), OutData.GetAllocatedSize(), Width, Height, ERGBFormat::BGRA, Depth))
+	const ERGBFormat ExportFormat = Texture->Source.GetFormat() == ETextureSourceFormat::TSF_G8 ? ERGBFormat::Gray : ERGBFormat::BGRA;
+	if (ImageWrapperPtr.IsValid() && ImageWrapperPtr->SetRaw(OutData.GetData(), OutData.GetAllocatedSize(), Width, Height, ExportFormat, Depth))
 	{
 		OutData = ImageWrapperPtr->GetCompressed(100);
 	}
@@ -250,7 +274,7 @@ bool UAsyncLoadSaveMapBuildData::LoadImagedataToTexture(class UObject* outer, TA
 	TSharedPtr<IImageWrapper>ImageWrapperPtr = ImageWrapperModule.CreateImageWrapper(ImageFormat);
 	if (ImageWrapperPtr.IsValid() && ImageWrapperPtr->SetCompressed(FileData.GetData(), FileData.GetAllocatedSize()))
 	{
-		//OutData ”Î∏Ò ΩŒﬁπÿµƒ—’…´ ˝æ›
+		//OutData ‰∏éÊ†ºÂºèÊó†ÂÖ≥ÁöÑÈ¢úËâ≤Êï∞ÊçÆ
 		ImageWrapperPtr->GetRaw(ERGBFormat::BGRA, 8, ImageData);
 		Width = ImageWrapperPtr->GetWidth();
 		Height = ImageWrapperPtr->GetHeight();
@@ -269,8 +293,9 @@ bool UAsyncLoadSaveMapBuildData::LoadImagedataToTexture(class UObject* outer, TA
 			InTexture->PlatformData = new FTexturePlatformData();
 			InTexture->PlatformData->SizeX = Width;
 			InTexture->PlatformData->SizeY = Height;
+			InTexture->PlatformData->NumSlices = 1;
 			InTexture->PlatformData->PixelFormat = PF_B8G8R8A8;
-
+			(Cast<UTexture2D>(InTexture))->Source.Init(Width, Height, 1, 1, ETextureSourceFormat::TSF_BGRA8, ImageData->GetData());
 			// Allocate first mipmap.
 			int32 NumBlocksX = SizeX / GPixelFormats[PF_B8G8R8A8].BlockSizeX;
 			int32 NumBlocksY = Sizey / GPixelFormats[PF_B8G8R8A8].BlockSizeY;
