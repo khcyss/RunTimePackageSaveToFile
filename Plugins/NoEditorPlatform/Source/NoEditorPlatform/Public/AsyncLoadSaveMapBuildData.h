@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintAsyncActionBase.h"
 #include "IImageWrapper.h"
+#include "Engine/Texture.h"
 #include "AsyncLoadSaveMapBuildData.generated.h"
 
 
@@ -34,7 +35,7 @@ public:
 	static TArray<uint8> TextureToArray(class UTexture* Texture);
 
 	template<class T>
-	static bool LoadImagedataToTexture(class UObject* outer, TArray<uint8> FileData,ERGBFormat format, T*& InTexture, float& Width, float& Height);
+	static bool LoadImagedataToTexture(class UObject* outer, TArray<uint8> FileData,ERGBFormat format, ETextureSourceFormat SourceFormat, T*& InTexture, float& Width, float& Height);
 
 public:
 	UPROPERTY(BlueprintAssignable)

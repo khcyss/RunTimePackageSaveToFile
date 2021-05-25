@@ -12,7 +12,6 @@
 #include "Async.h"
 #include "Engine/ShadowMapTexture2D.h"
 #include "Object.h"
-#include "Engine/Texture.h"
 #include "Engine/World.h"
 
 PRAGMA_DISABLE_OPTIMIZATION
@@ -84,12 +83,16 @@ void UAsyncLoadSaveMapBuildData::Save(UObject* WorldContextObject, const FString
 			{
 				uint32 LightmapFlags = EachTexture->LightmapFlags;
 				ToBinary << LightmapFlags;
+				int8 ExportFormat = EachTexture->Source.GetFormat() == ETextureSourceFormat::TSF_G8 ? (int8)ERGBFormat::Gray : (int8)ERGBFormat::BGRA;
+				ToBinary << ExportFormat;
+				int8 sourceFormat = (int8)EachTexture->Source.GetFormat();
+				ToBinary << sourceFormat;
 				TArray<uint8> Texturedata = TextureToArray(EachTexture);
 				ToBinary << Texturedata;
 			}
 		}
-		bool HasShadowMap = Each.Value.ShadowMap ? true : false;
-		ToBinary << HasShadowMap;
+		//bool HasShadowMap = Each.Value.ShadowMap ? true : false;
+		bool HasShadowMap = false;
 		if (Each.Value.ShadowMap)
 		{
 			FShadowMap2D* ShadowMap = Each.Value.ShadowMap->GetShadowMap2D();
@@ -97,15 +100,26 @@ void UAsyncLoadSaveMapBuildData::Save(UObject* WorldContextObject, const FString
 			{
 				if (ShadowMap->GetTexture())
 				{
+					HasShadowMap = true;
+					ToBinary << HasShadowMap;
 					ToBinary << ShadowMap->LightGuids;
 					int8 ExportFormat = ShadowMap->GetTexture()->Source.GetFormat() == ETextureSourceFormat::TSF_G8 ? (int8)ERGBFormat::Gray : (int8)ERGBFormat::BGRA;
 					ToBinary << ExportFormat;
+					int8 sourceFormat = (int8)ShadowMap->GetTexture()->Source.GetFormat();
+					ToBinary << sourceFormat;
+					ToBinary << ShadowMap->CoordinateScale << ShadowMap->CoordinateBias;
+					for (int Channel = 0; Channel < ARRAY_COUNT(ShadowMap->bChannelValid); Channel++)
+					{
+						ToBinary << ShadowMap->bChannelValid[Channel];
+					}
+					ToBinary<< ShadowMap->InvUniformPenumbraSize;
 					TArray<uint8> Texturedata = TextureToArray(ShadowMap->GetTexture());
 					ToBinary << Texturedata;
 					ToBinary << (Cast<UShadowMapTexture2D>(ShadowMap->GetTexture()))->ShadowmapFlags;
 				}
-			}
-		}
+				else ToBinary << HasShadowMap;
+			}else ToBinary << HasShadowMap;
+		}else ToBinary << HasShadowMap;
 	}
 
 	MapBuildDataReg->RuntimeSaveLoadData(ToBinary);
@@ -126,7 +140,9 @@ void UAsyncLoadSaveMapBuildData::Save(UObject* WorldContextObject, const FString
 void UAsyncLoadSaveMapBuildData::Load(UObject* WorldContextObject, const FString& FileToSavePath)
 {
 	UMapBuildDataRegistry* MapBuildDataReg = WorldContextObject->GetWorld()->GetCurrentLevel()->GetOrCreateMapBuildData();
-	MapBuildDataReg->InvalidateStaticLighting(WorldContextObject->GetWorld());//初始化时清空一次数据
+	TSet<FGuid> KeepLight;
+	WorldContextObject->GetWorld()->GetCurrentLevel()->HandleLegacyMapBuildData();
+	MapBuildDataReg->InvalidateStaticLighting(WorldContextObject->GetWorld(),true, &KeepLight);//初始化时清空一次数据
 	TArray<uint8> BinaryArray;
 	if (FFileHelper::LoadFileToArray(BinaryArray, *FileToSavePath))
 	{
@@ -162,13 +178,17 @@ void UAsyncLoadSaveMapBuildData::Load(UObject* WorldContextObject, const FString
 			for (int j = 0; j < TextureNum; j++)
 			{
 				uint32 LightmapFlags;
+				int8 Format;
+				int8 SourceFormat;
 				FromBinary << LightmapFlags;
+				FromBinary << Format;
+				FromBinary << SourceFormat;
 				TArray<uint8> TextureFileData;
 				FromBinary << TextureFileData;
 				ULightMapTexture2D* Image;
 				float Hegiht;
 				float width;
-				LoadImagedataToTexture<ULightMapTexture2D>(MapBuildDataReg->GetOuter(), TextureFileData, ERGBFormat::BGRA, Image, width, Hegiht);
+				LoadImagedataToTexture<ULightMapTexture2D>(MapBuildDataReg->GetOuter(), TextureFileData, (ERGBFormat)Format,(ETextureSourceFormat)SourceFormat, Image, width, Hegiht);
 				Image->LightmapFlags = ELightMapFlags(LightmapFlags);
 				if (HasSkyOcclusionTexture && j == TextureNum - 2)
 				{
@@ -203,15 +223,24 @@ void UAsyncLoadSaveMapBuildData::Load(UObject* WorldContextObject, const FString
 			if (HasShadowMap)
 			{
 				int8 Format;
+				int8 SourceFormat;
+				FVector2D CoordinateScale, CoordinateBias;
 				FromBinary << ShadowMap->LightGuids;
 				FromBinary << Format;
+				FromBinary << SourceFormat;
+				FromBinary << ShadowMap->CoordinateScale << ShadowMap->CoordinateBias;
+				//FromBinary << CoordinateScale << CoordinateBias;
+				for (int Channel = 0; Channel < ARRAY_COUNT(ShadowMap->bChannelValid); Channel++)
+				{
+					FromBinary << ShadowMap->bChannelValid[Channel];
+				}
+				FromBinary << ShadowMap->InvUniformPenumbraSize;
 				TArray<uint8> TextureFileData;
 				FromBinary << TextureFileData;
 				UShadowMapTexture2D* Image = NULL;
 				float Hegiht;
 				float width;
-				//FShadowMapPendingTexture* Texture = 
-				LoadImagedataToTexture<UShadowMapTexture2D>(MapBuildDataReg->GetOuter(), TextureFileData,(ERGBFormat)Format , Image, width, Hegiht);
+				LoadImagedataToTexture<UShadowMapTexture2D>(MapBuildDataReg->GetOuter(), TextureFileData,(ERGBFormat)Format,(ETextureSourceFormat)SourceFormat, Image, width, Hegiht);
 				Image->LODGroup = TEXTUREGROUP_Shadowmap;
 				Image->SRGB = false;
 				Image->MipGenSettings = TMGS_LeaveExistingMips;
@@ -220,7 +249,6 @@ void UAsyncLoadSaveMapBuildData::Load(UObject* WorldContextObject, const FString
 				FromBinary << Image->ShadowmapFlags;
 				ShadowMap->Texture = Image;
 				ShadowMap->SetStatusUpdate(true);
-				//ShadowMap->EncodeTextures(WorldContextObject->GetWorld(), WorldContextObject->GetWorld()->GetCurrentLevel(),true);
 			}
 			MeshBuildData.Add(guid, MeshBuid);
 		}
@@ -269,7 +297,7 @@ TArray<uint8> UAsyncLoadSaveMapBuildData::TextureToArray(class UTexture* Texture
 
 
 template<class T>
-bool UAsyncLoadSaveMapBuildData::LoadImagedataToTexture(class UObject* outer, TArray<uint8> FileData, enum ERGBFormat format, T*& InTexture, float& Width, float& Height)
+bool UAsyncLoadSaveMapBuildData::LoadImagedataToTexture(class UObject* outer, TArray<uint8> FileData, enum ERGBFormat format, ETextureSourceFormat SourceFormat, T*& InTexture, float& Width, float& Height)
 {
 	const TArray<uint8>* ImageData = new TArray<uint8>();
 	EImageFormat ImageFormat = EImageFormat::PNG;
@@ -298,7 +326,7 @@ bool UAsyncLoadSaveMapBuildData::LoadImagedataToTexture(class UObject* outer, TA
 			InTexture->PlatformData->SizeY = Height;
 			InTexture->PlatformData->NumSlices = 1;
 			InTexture->PlatformData->PixelFormat = PF_B8G8R8A8;
-			(Cast<UTexture2D>(InTexture))->Source.Init(Width, Height, 1, 1, ETextureSourceFormat::TSF_BGRA8, ImageData->GetData());
+			(Cast<UTexture2D>(InTexture))->Source.Init(Width, Height, 1, 1, SourceFormat, ImageData->GetData());
 			// Allocate first mipmap.
 			int32 NumBlocksX = SizeX / GPixelFormats[PF_B8G8R8A8].BlockSizeX;
 			int32 NumBlocksY = Sizey / GPixelFormats[PF_B8G8R8A8].BlockSizeY;
